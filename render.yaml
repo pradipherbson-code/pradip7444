@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: omnistream-downloader
+    name: omnistream-by-pradip
     env: docker
     plan: free
     region: oregon

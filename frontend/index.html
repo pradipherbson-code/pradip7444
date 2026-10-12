@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OmniStream by Pradip - All-in-One Social Video, Image & MP3 Downloader</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="bg-[#0a0c14] text-slate-100 min-h-screen relative flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+  <!-- Ambient Glow Background -->
+  <div class="glow-bg"></div>
+
+  <!-- Header Navigation -->
+  <header class="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#0a0c14]/80 border-b border-white/[0.08]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-fuchsia-600 to-pink-500 p-0.5 shadow-lg shadow-indigo-500/20">
+          <div class="w-full h-full bg-[#0a0c14] rounded-[14px] flex items-center justify-center">
+            <i data-lucide="sparkles" class="w-6 h-6 text-indigo-400"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-300 bg-clip-text text-transparent">
+              OmniStream
+            </span>
+            <div class="pradip-nav-pill">
+              <span class="pradip-live-dot"></span>
+              <span class="text-[11px] font-extrabold text-pink-300 tracking-wide uppercase">BY PRADIP</span>
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Universal Media & MP3 Downloader • <span class="pradip-text-gradient font-bold">Created by Pradip</span></p>
+        </div>
+      </div>
+
+      <!-- Right Controls: Status & History Drawer Toggle -->
+      <div class="flex items-center gap-3">
+        <!-- Backend Status Badge -->
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs font-medium text-slate-300">
+          <span id="server-status-dot" class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span>
+          <span id="server-status-text">Checking server...</span>
+        </div>
+
+        <!-- History Button -->
+        <button id="open-history-btn" class="relative p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition flex items-center gap-2 text-sm font-semibold">
+          <i data-lucide="clock" class="w-4 h-4"></i>
+          <span class="hidden md:inline">History</span>
+          <span class="history-count-badge hidden absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-indigo-600 text-[10px] font-bold text-white flex items-center justify-center shadow-lg">
+            0
+          </span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Platform Switcher Navigation Bar -->
+  <section class="border-b border-white/[0.06] bg-[#0c0f1a]/60 backdrop-blur-md sticky top-20 z-30 overflow-x-auto no-scrollbar">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2 sm:gap-3 min-w-max">
+      
+      <button data-platform="universal" class="platform-tab flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition bg-indigo-600 text-white shadow-lg shadow-indigo-500/25">
+        <i data-lucide="layers" class="w-4 h-4"></i>
+        <span>All-in-One</span>
+      </button>
+
+      <button data-platform="youtube" class="platform-tab flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition">
+        <i data-lucide="youtube" class="w-4 h-4 text-red-500"></i>
+        <span>YouTube</span>
+      </button>
+
+      <button data-platform="instagram" class="platform-tab flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition">
+        <i data-lucide="instagram" class="w-4 h-4 text-pink-500"></i>
+        <span>Instagram</span>
+      </button>
+
+      <button data-platform="facebook" class="platform-tab flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition">
+        <i data-lucide="facebook" class="w-4 h-4 text-blue-500"></i>
+        <span>Facebook</span>
+      </button>
+
+      <button data-platform="reddit" class="platform-tab flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition">
+        <i data-lucide="flame" class="w-4 h-4 text-orange-500"></i>
+        <span>Reddit</span>
+      </button>
+
+      <button data-platform="x" class="platform-tab flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition">
+        <i data-lucide="twitter" class="w-4 h-4 text-sky-400"></i>
+        <span>X / Twitter</span>
+      </button>
+
+      <button data-platform="tiktok" class="platform-tab flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition">
+        <i data-lucide="music-2" class="w-4 h-4 text-cyan-400"></i>
+        <span>TikTok</span>
+      </button>
+
+      <button data-platform="threads" class="platform-tab flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 transition">
+        <i data-lucide="at-sign" class="w-4 h-4 text-purple-400"></i>
+        <span>Threads</span>
+      </button>
+
+    </div>
+  </section>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-1">
+    
+    <!-- Hero Platform Banner -->
+    <div class="text-center max-w-3xl mx-auto mb-10">
+      
+      <!-- Creator Attraction Spotlight Banner (Maximum Attention Animation) -->
+      <div class="mb-5 flex justify-center">
+        <div class="pradip-spotlight-wrapper cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+          <div class="pradip-spotlight-inner">
+            <span class="text-base animate-bounce">⚡</span>
+            <span class="text-[11px] sm:text-xs uppercase font-bold tracking-widest text-slate-300">Engineered by</span>
+            <span class="pradip-text-gradient pradip-glowing text-sm sm:text-base font-black tracking-wider px-1">PRADIP</span>
+            <span class="pradip-live-dot ml-1"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Brand Mark -->
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold mb-4">
+        <i data-lucide="zap" class="w-3.5 h-3.5 text-indigo-400"></i>
+        <span id="hero-badge">All-in-One Engine</span>
+      </div>
+      
+      <h1 id="hero-title" class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
+        Universal Media & MP3 Downloader
+      </h1>
+      
+      <p id="hero-subtitle" class="text-base sm:text-lg text-slate-400 leading-relaxed max-w-2xl mx-auto">
+        Download ultra-HD videos, crisp images, and high-fidelity 320kbps MP3 audio from any social platform with one click.
+      </p>
+    </div>
+
+    <!-- Main Downloader Card Box -->
+    <div class="glass-panel p-5 sm:p-8 rounded-3xl mb-10 shadow-2xl relative">
+      
+      <!-- Format Preference Selector Bar -->
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Format Filter:</span>
+        <div class="flex items-center gap-1.5">
+          <button data-mode="all" class="filter-pill text-xs font-semibold px-3 py-1.5 rounded-lg border border-indigo-500 bg-indigo-600/30 text-indigo-300 transition">
+            All Options
+          </button>
+          <button data-mode="video" class="filter-pill text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-200 transition">
+            🎬 Video (MP4)
+          </button>
+          <button data-mode="audio" class="filter-pill text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-200 transition">
+            🎵 MP3 Only
+          </button>
+          <button data-mode="image" class="filter-pill text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:text-slate-200 transition">
+            🖼️ Photos
+          </button>
+        </div>
+      </div>
+
+      <!-- URL Input Group -->
+      <div class="flex flex-col sm:flex-row items-stretch gap-3">
+        <div class="relative flex-1">
+          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+            <i data-lucide="link-2" class="w-5 h-5"></i>
+          </div>
+
+          <input 
+            type="text" 
+            id="url-input" 
+            class="glass-input w-full pl-12 pr-24 py-4 rounded-2xl text-slate-100 placeholder-slate-500 text-sm sm:text-base focus:outline-none font-medium" 
+            placeholder="Paste any link from YouTube, Instagram, TikTok, Reddit, X, Facebook, Threads..."
+            autocomplete="off"
+          />
+
+          <!-- Inside input action buttons: Clear & Paste -->
+          <div class="absolute inset-y-0 right-0 pr-3 flex items-center gap-1.5">
+            <button id="clear-btn" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition" title="Clear input">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+            <button id="paste-btn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1">
+              <i data-lucide="clipboard" class="w-3.5 h-3.5"></i>
+              Paste
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button 
+          id="fetch-btn" 
+          class="px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-500 text-white font-extrabold text-sm sm:text-base transition transform hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 pulse-glow"
+        >
+          <i data-lucide="download" class="w-5 h-5"></i>
+          <span>Fetch Media</span>
+        </button>
+      </div>
+
+      <!-- Quick sample trigger link -->
+      <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+        <span class="flex items-center gap-1">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+          High-Speed Server • Direct MP4 & MP3 Download
+        </span>
+        <button id="sample-btn" class="text-indigo-400 hover:text-indigo-300 font-semibold underline decoration-indigo-400/30 hover:decoration-indigo-300 transition">
+          Try a sample link
+        </button>
+      </div>
+
+      <!-- Loading State Spinner -->
+      <div id="loading-indicator" class="hidden mt-6 pt-6 border-t border-slate-800 text-center">
+        <div class="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-indigo-950/60 border border-indigo-500/30">
+          <div class="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+          <span class="text-sm font-semibold text-indigo-200">Analyzing URL and extracting media streams...</span>
+        </div>
+      </div>
+
+      <!-- Error State Banner -->
+      <div id="error-container" class="hidden mt-6 p-4 rounded-2xl bg-red-950/50 border border-red-500/40 text-red-200 flex items-start gap-3">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5"></i>
+        <div>
+          <h4 class="font-bold text-sm text-red-300">Extraction Error</h4>
+          <p id="error-message" class="text-xs text-red-300/80 mt-0.5">Unable to fetch media.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Results Media Card Container (Populated via JS) -->
+    <div id="results-container" class="hidden mb-14"></div>
+
+    <!-- Supported Platforms Showcase Grid -->
+    <section class="mb-14">
+      <div class="text-center mb-8">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">
+          Dedicated Support for All Major Platforms
+        </h2>
+        <p class="text-sm text-slate-400">
+          Click any platform to switch to its specialized download section.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- YouTube Card -->
+        <div data-platform="youtube" class="quick-platform-card glass-panel p-5 rounded-2xl cursor-pointer hover:border-red-500/50 transition transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="youtube" class="w-6 h-6"></i>
+          </div>
+          <h3 class="font-bold text-slate-100 text-base mb-1">YouTube</h3>
+          <p class="text-xs text-slate-400 mb-3">4K, 1080p, 720p Videos, Shorts & MP3 Audio conversion.</p>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">1080p HD</span>
+            <span class="text-[10px] bg-red-500/10 text-red-300 px-2 py-0.5 rounded">MP3 320k</span>
+          </div>
+        </div>
+
+        <!-- Instagram Card -->
+        <div data-platform="instagram" class="quick-platform-card glass-panel p-5 rounded-2xl cursor-pointer hover:border-pink-500/50 transition transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-pink-500/10 text-pink-500 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="instagram" class="w-6 h-6"></i>
+          </div>
+          <h3 class="font-bold text-slate-100 text-base mb-1">Instagram</h3>
+          <p class="text-xs text-slate-400 mb-3">Reels, carousel posts, story videos & background MP3 audio.</p>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Reels</span>
+            <span class="text-[10px] bg-pink-500/10 text-pink-300 px-2 py-0.5 rounded">Carousels</span>
+          </div>
+        </div>
+
+        <!-- TikTok Card -->
+        <div data-platform="tiktok" class="quick-platform-card glass-panel p-5 rounded-2xl cursor-pointer hover:border-cyan-500/50 transition transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="music-2" class="w-6 h-6"></i>
+          </div>
+          <h3 class="font-bold text-slate-100 text-base mb-1">TikTok</h3>
+          <p class="text-xs text-slate-400 mb-3">No watermark HD MP4 video downloads & viral sound MP3s.</p>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">No Watermark</span>
+            <span class="text-[10px] bg-cyan-500/10 text-cyan-300 px-2 py-0.5 rounded">Audio MP3</span>
+          </div>
+        </div>
+
+        <!-- Facebook Card -->
+        <div data-platform="facebook" class="quick-platform-card glass-panel p-5 rounded-2xl cursor-pointer hover:border-blue-500/50 transition transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="facebook" class="w-6 h-6"></i>
+          </div>
+          <h3 class="font-bold text-slate-100 text-base mb-1">Facebook</h3>
+          <p class="text-xs text-slate-400 mb-3">Facebook Watch clips, reels, public videos & MP3 audio.</p>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Watch HD</span>
+            <span class="text-[10px] bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded">FB Reels</span>
+          </div>
+        </div>
+
+        <!-- Reddit Card -->
+        <div data-platform="reddit" class="quick-platform-card glass-panel p-5 rounded-2xl cursor-pointer hover:border-orange-500/50 transition transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="flame" class="w-6 h-6"></i>
+          </div>
+          <h3 class="font-bold text-slate-100 text-base mb-1">Reddit</h3>
+          <p class="text-xs text-slate-400 mb-3">Videos with audio merged via FFmpeg, full galleries & GIFs.</p>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Merged Sound</span>
+            <span class="text-[10px] bg-orange-500/10 text-orange-300 px-2 py-0.5 rounded">Galleries</span>
+          </div>
+        </div>
+
+        <!-- X / Twitter Card -->
+        <div data-platform="x" class="quick-platform-card glass-panel p-5 rounded-2xl cursor-pointer hover:border-sky-400/50 transition transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="twitter" class="w-6 h-6"></i>
+          </div>
+          <h3 class="font-bold text-slate-100 text-base mb-1">X / Twitter</h3>
+          <p class="text-xs text-slate-400 mb-3">High bitrate MP4 videos, looping GIFs, and full-res photos.</p>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Best Bitrate</span>
+            <span class="text-[10px] bg-sky-500/10 text-sky-300 px-2 py-0.5 rounded">GIFs & Photos</span>
+          </div>
+        </div>
+
+        <!-- Threads Card -->
+        <div data-platform="threads" class="quick-platform-card glass-panel p-5 rounded-2xl cursor-pointer hover:border-purple-400/50 transition transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="at-sign" class="w-6 h-6"></i>
+          </div>
+          <h3 class="font-bold text-slate-100 text-base mb-1">Threads</h3>
+          <p class="text-xs text-slate-400 mb-3">Threads posts, video clips, and high-resolution photo sets.</p>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Videos</span>
+            <span class="text-[10px] bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded">Photos</span>
+          </div>
+        </div>
+
+        <!-- Audio MP3 Specialist Card -->
+        <div data-platform="universal" class="quick-platform-card glass-panel p-5 rounded-2xl cursor-pointer hover:border-fuchsia-500/50 transition transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-fuchsia-500/10 text-fuchsia-400 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+            <i data-lucide="headphones" class="w-6 h-6"></i>
+          </div>
+          <h3 class="font-bold text-slate-100 text-base mb-1">Pure MP3 Mode</h3>
+          <p class="text-xs text-slate-400 mb-3">Extract crystal-clear 320 kbps MP3 audio from any video.</p>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[10px] bg-fuchsia-500/20 text-fuchsia-300 px-2 py-0.5 rounded">320 kbps</span>
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Any Video</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="glass-panel p-8 sm:p-10 rounded-3xl mb-14">
+      <div class="text-center max-w-xl mx-auto mb-10">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">How to Download in 3 Steps</h2>
+        <p id="guide-text" class="text-sm text-slate-400">
+          Paste any supported link. Our engine automatically parses all video qualities, extracts MP3 audio, and fetches images.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col items-center text-center">
+          <div class="w-12 h-12 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-extrabold text-lg mb-4">
+            1
+          </div>
+          <h3 class="font-bold text-white text-base mb-2">Copy the Link</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Copy the post, video, or reel link from your browser or mobile app (Instagram, YouTube, TikTok, Reddit, etc.).
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col items-center text-center">
+          <div class="w-12 h-12 rounded-xl bg-fuchsia-600/20 text-fuchsia-400 flex items-center justify-center font-extrabold text-lg mb-4">
+            2
+          </div>
+          <h3 class="font-bold text-white text-base mb-2">Select Video or MP3</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Click Paste or hit Enter. Select your preferred MP4 resolution (1080p, 720p) or choose "Download MP3 Audio" for music tracks.
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col items-center text-center">
+          <div class="w-12 h-12 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-extrabold text-lg mb-4">
+            3
+          </div>
+          <h3 class="font-bold text-white text-base mb-2">Save to Device</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Hit Download and the media stream will be processed and saved directly to your phone, tablet, or PC Downloads folder.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Sliding Download History Drawer -->
+  <div id="history-drawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-[#0e111d] border-l border-white/10 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+    <!-- Drawer Header -->
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i data-lucide="clock" class="w-5 h-5 text-indigo-400"></i>
+        <h3 class="font-bold text-white text-base">Download History</h3>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="clear-history-btn" class="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition" title="Clear history">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+        <button id="close-history-btn" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Close drawer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- History List Items -->
+    <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+      <!-- Injected by history.js -->
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="p-4 border-t border-slate-800 text-center text-xs text-slate-500">
+      Downloads are stored locally in your browser.
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/[0.06] bg-[#080a10] py-8 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i>
+        <span class="font-bold text-slate-300">OmniStream Media</span>
+        <span>• Designed & Developed with ⚡ by <span class="pradip-text-gradient font-extrabold">Pradip</span></span>
+      </div>
+      <p class="text-[11px] text-slate-500">
+        Supports YouTube, Instagram, Facebook, Reddit, X (Twitter), TikTok, Threads & MP3 extraction.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/static/js/history.js"></script>
+  <script src="/static/js/downloader.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

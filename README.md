@@ -10,6 +10,8 @@ pinned: false
 
 # ⚡ OmniStream By Pradip — Multi-Platform Social Media & MP3 Downloader
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/pradipherbson-code/omnistream-by-pradip)
+
 A full-stack, responsive web application to download videos, images, and audio from all major social platforms, featuring dedicated sections for each platform and high-fidelity MP3 audio conversion.
 
 ---
