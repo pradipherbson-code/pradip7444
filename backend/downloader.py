@@ -14,18 +14,60 @@ from backend.extractors import (
     parse_instagram_custom,
     parse_reddit_custom
 )
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+from pathlib import Path
 
-def get_ydl_base_opts() -> Dict[str, Any]:
-    """Base options for yt-dlp extraction and downloading."""
+def sanitize_media_url(url: str) -> str:
+    """Removes tracking query parameters like ?si=... from YouTube/social URLs."""
+    clean = url.strip()
+    if "youtu.be/" in clean or "youtube.com/" in clean:
+        parsed = urlparse(clean)
+        qs = parse_qs(parsed.query)
+        for param in ["si", "feature", "pp"]:
+            qs.pop(param, None)
+        new_query = urlencode(qs, doseq=True)
+        clean = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+    return clean
+
+def get_ydl_base_opts(fallback_client: bool = False) -> Dict[str, Any]:
+    """Base options for yt-dlp extraction and downloading with challenge solver and anti-bot bypass."""
     opts = {
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
         "ffmpeg_location": FFMPEG_PATH,
-        "socket_timeout": 15,
+        "socket_timeout": 20,
         "retries": 5,
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "remote_components": ["ejs:github"],
     }
+
+    # Auto-load cookies.txt if present
+    cookie_paths = [
+        Path(__file__).resolve().parent.parent / "cookies.txt",
+        Path(__file__).resolve().parent / "cookies.txt",
+        Path.cwd() / "cookies.txt"
+    ]
+    for cp in cookie_paths:
+        if cp.exists():
+            opts["cookiefile"] = str(cp)
+            break
+
+    if fallback_client:
+        # Client that bypasses "Sign in to confirm you're not a bot"
+        opts["extractor_args"] = {
+            "youtube": {
+                "player_client": ["android", "ios", "mweb"],
+                "player_skip": ["webpage", "configs"]
+            }
+        }
+    else:
+        # Robust multi-client list
+        opts["extractor_args"] = {
+            "youtube": {
+                "player_client": ["web", "tv_embedded", "android", "ios", "mweb"]
+            }
+        }
+
     return opts
 
 def extract_media_info(url: str, requested_platform: Optional[str] = None) -> Dict[str, Any]:
@@ -33,7 +75,7 @@ def extract_media_info(url: str, requested_platform: Optional[str] = None) -> Di
     Extracts all metadata, video quality options, audio/MP3 stream options,
     and image attachments from any supported URL.
     """
-    clean_url = url.strip()
+    clean_url = sanitize_media_url(url)
     platform = requested_platform or detect_platform(clean_url)
 
     # 1. Check for direct image or Reddit media link first
@@ -53,111 +95,123 @@ def extract_media_info(url: str, requested_platform: Optional[str] = None) -> Di
         if custom_reddit:
             return custom_reddit
 
-    # 4. Standard yt-dlp extraction
-    ydl_opts = get_ydl_base_opts()
+    # 4. Standard yt-dlp extraction with anti-bot fallback
+    ydl_opts = get_ydl_base_opts(fallback_client=False)
     ydl_opts["skip_download"] = True
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(clean_url, download=False)
-            if not info:
-                raise ValueError("Could not retrieve media info from this link.")
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(clean_url, download=False)
+        except Exception as first_err:
+            err_str = str(first_err).lower()
+            if any(k in err_str for k in ["sign in", "not a bot", "bot", "sabr", "429"]):
+                # Fallback to Android/iOS client which bypasses bot challenges
+                fb_opts = get_ydl_base_opts(fallback_client=True)
+                fb_opts["skip_download"] = True
+                with yt_dlp.YoutubeDL(fb_opts) as ydl:
+                    info = ydl.extract_info(clean_url, download=False)
+            else:
+                raise first_err
 
-            # Check if it returned a multi-entry playlist/carousel
-            if "entries" in info and info["entries"]:
-                entries = list(info["entries"])
-                items = []
-                for idx, entry in enumerate(entries):
-                    if not entry:
-                        continue
-                    item_type = "video" if entry.get("vcodec") and entry.get("vcodec") != "none" else "image"
-                    items.append({
-                        "index": idx + 1,
-                        "type": item_type,
-                        "url": (entry.get("url") or entry.get("webpage_url") or "").replace("&amp;", "&"),
-                        "thumbnail": (entry.get("thumbnail") or "").replace("&amp;", "&"),
-                        "title": entry.get("title") or f"Item {idx + 1}"
-                    })
-                
-                title = info.get("title") or entries[0].get("title") or f"{platform.capitalize()} Post"
-                thumb = (entries[0].get("thumbnail") or info.get("thumbnail") or "").replace("&amp;", "&")
-                author = entries[0].get("uploader") or info.get("uploader") or f"{platform.capitalize()} User"
+        if not info:
+            raise ValueError("Could not retrieve media info from this link.")
 
-                return {
-                    "success": True,
-                    "platform": platform,
-                    "title": title,
-                    "author": author,
-                    "thumbnail": thumb,
-                    "media_type": "carousel",
-                    "is_video": any(i["type"] == "video" for i in items),
-                    "items": items,
-                    "duration": entries[0].get("duration"),
-                    "formats": build_quality_formats(entries[0], platform)
-                }
-
-            # Single media item
-            is_video = (
-                info.get("vcodec") is not None and info.get("vcodec") != "none"
-            ) or (
-                any(f.get("vcodec") not in (None, "none") for f in info.get("formats", []))
-            )
-
-            title = info.get("title") or f"{platform.capitalize()} Media"
-            thumbnail = (info.get("thumbnail") or (info.get("thumbnails")[-1]["url"] if info.get("thumbnails") else None) or "").replace("&amp;", "&")
-            author = info.get("uploader") or info.get("channel") or info.get("creator") or f"{platform.capitalize()} Creator"
-            duration = info.get("duration")
-
-            # Check for direct image or single photo post
-            if not is_video and thumbnail:
-                return {
-                    "success": True,
-                    "platform": platform,
-                    "title": title,
-                    "author": author,
-                    "thumbnail": thumbnail,
-                    "media_type": "image",
-                    "is_video": False,
-                    "items": [{"type": "image", "url": (info.get("url") or thumbnail).replace("&amp;", "&"), "width": info.get("width"), "height": info.get("height")}],
-                    "duration": None,
-                    "formats": []
-                }
-
-            formats = build_quality_formats(info, platform)
-
-            # Direct preview stream URL if available
-            preview_url = None
-            if is_video:
-                for f in reversed(info.get("formats", [])):
-                    if f.get("vcodec") != "none" and f.get("acodec") != "none" and f.get("url"):
-                        if "m3u8" not in f.get("url", ""):
-                            preview_url = f.get("url")
-                            break
-
-            # Always provide thumbnail as an image item so the user can download it
+        # Check if it returned a multi-entry playlist/carousel
+        if "entries" in info and info["entries"]:
+            entries = list(info["entries"])
             items = []
-            if thumbnail:
+            for idx, entry in enumerate(entries):
+                if not entry:
+                    continue
+                item_type = "video" if entry.get("vcodec") and entry.get("vcodec") != "none" else "image"
                 items.append({
-                    "index": 1,
-                    "type": "image",
-                    "url": thumbnail,
-                    "thumbnail": thumbnail,
-                    "title": f"{title} - Cover / Thumbnail"
+                    "index": idx + 1,
+                    "type": item_type,
+                    "url": (entry.get("url") or entry.get("webpage_url") or "").replace("&amp;", "&"),
+                    "thumbnail": (entry.get("thumbnail") or "").replace("&amp;", "&"),
+                    "title": entry.get("title") or f"Item {idx + 1}"
                 })
+            
+            title = info.get("title") or entries[0].get("title") or f"{platform.capitalize()} Post"
+            thumb = (entries[0].get("thumbnail") or info.get("thumbnail") or "").replace("&amp;", "&")
+            author = entries[0].get("uploader") or info.get("uploader") or f"{platform.capitalize()} User"
 
             return {
                 "success": True,
                 "platform": platform,
                 "title": title,
                 "author": author,
-                "thumbnail": thumbnail,
-                "media_type": "video" if is_video else "image",
-                "is_video": is_video,
-                "duration": duration,
-                "preview_url": preview_url,
+                "thumbnail": thumb,
+                "media_type": "carousel",
+                "is_video": any(i["type"] == "video" for i in items),
                 "items": items,
-                "formats": formats
+                "duration": entries[0].get("duration"),
+                "formats": build_quality_formats(entries[0], platform)
             }
+
+        # Single media item
+        is_video = (
+            info.get("vcodec") is not None and info.get("vcodec") != "none"
+        ) or (
+            any(f.get("vcodec") not in (None, "none") for f in info.get("formats", []))
+        )
+
+        title = info.get("title") or f"{platform.capitalize()} Media"
+        thumbnail = (info.get("thumbnail") or (info.get("thumbnails")[-1]["url"] if info.get("thumbnails") else None) or "").replace("&amp;", "&")
+        author = info.get("uploader") or info.get("channel") or info.get("creator") or f"{platform.capitalize()} Creator"
+        duration = info.get("duration")
+
+        # Check for direct image or single photo post
+        if not is_video and thumbnail:
+            return {
+                "success": True,
+                "platform": platform,
+                "title": title,
+                "author": author,
+                "thumbnail": thumbnail,
+                "media_type": "image",
+                "is_video": False,
+                "items": [{"type": "image", "url": (info.get("url") or thumbnail).replace("&amp;", "&"), "width": info.get("width"), "height": info.get("height")}],
+                "duration": None,
+                "formats": []
+            }
+
+        formats = build_quality_formats(info, platform)
+
+        # Direct preview stream URL if available
+        preview_url = None
+        if is_video:
+            for f in reversed(info.get("formats", [])):
+                if f.get("vcodec") != "none" and f.get("acodec") != "none" and f.get("url"):
+                    if "m3u8" not in f.get("url", ""):
+                        preview_url = f.get("url")
+                        break
+
+        # Always provide thumbnail as an image item so the user can download it
+        items = []
+        if thumbnail:
+            items.append({
+                "index": 1,
+                "type": "image",
+                "url": thumbnail,
+                "thumbnail": thumbnail,
+                "title": f"{title} - Cover / Thumbnail"
+            })
+
+        return {
+            "success": True,
+            "platform": platform,
+            "title": title,
+            "author": author,
+            "thumbnail": thumbnail,
+            "media_type": "video" if is_video else "image",
+            "is_video": is_video,
+            "duration": duration,
+            "preview_url": preview_url,
+            "items": items,
+            "formats": formats
+        }
 
     except Exception as e:
         error_msg = str(e)
@@ -277,30 +331,56 @@ def perform_download(
         else:
             ydl_opts["format"] = "bestvideo+bestaudio/best"
 
+    clean_download_url = sanitize_media_url(url)
+
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            meta = ydl.extract_info(url, download=True)
-            title = custom_title or (meta.get("title") if meta else "media")
-            sanitized = sanitize_filename(title)
-            ext = "mp3" if is_audio else "mp4"
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                meta = ydl.extract_info(clean_download_url, download=True)
+        except Exception as first_dl_err:
+            err_str = str(first_dl_err).lower()
+            if any(k in err_str for k in ["sign in", "not a bot", "bot", "sabr", "429"]):
+                # Retry download with Android/iOS fallback client
+                fb_opts = get_ydl_base_opts(fallback_client=True)
+                fb_opts["outtmpl"] = out_template
+                if is_audio:
+                    bitrate = "320" if "320" in quality else "192"
+                    fb_opts["format"] = "bestaudio/best"
+                    fb_opts["postprocessors"] = [{
+                        "key": "FFmpegExtractAudio",
+                        "preferredcodec": "mp3",
+                        "preferredquality": bitrate,
+                    }]
+                else:
+                    fb_opts["merge_output_format"] = "mp4"
+                    fb_opts["format"] = "best/bestvideo+bestaudio"
 
-            pattern = str(DOWNLOADS_DIR / f"{file_id}_*")
-            matches = glob.glob(pattern)
-            if not matches:
-                raise FileNotFoundError("Downloaded file could not be located on disk.")
-            
-            filepath = matches[0]
-            actual_ext = os.path.splitext(filepath)[1].lstrip(".") or ext
-            final_filename = f"{sanitized}.{actual_ext}"
+                with yt_dlp.YoutubeDL(fb_opts) as ydl:
+                    meta = ydl.extract_info(clean_download_url, download=True)
+            else:
+                raise first_dl_err
 
-            return {
-                "success": True,
-                "filepath": filepath,
-                "filename": final_filename,
-                "title": title,
-                "size_bytes": os.path.getsize(filepath),
-                "type": "audio" if is_audio else "video"
-            }
+        title = custom_title or (meta.get("title") if meta else "media")
+        sanitized = sanitize_filename(title)
+        ext = "mp3" if is_audio else "mp4"
+
+        pattern = str(DOWNLOADS_DIR / f"{file_id}_*")
+        matches = glob.glob(pattern)
+        if not matches:
+            raise FileNotFoundError("Downloaded file could not be located on disk.")
+        
+        filepath = matches[0]
+        actual_ext = os.path.splitext(filepath)[1].lstrip(".") or ext
+        final_filename = f"{sanitized}.{actual_ext}"
+
+        return {
+            "success": True,
+            "filepath": filepath,
+            "filename": final_filename,
+            "title": title,
+            "size_bytes": os.path.getsize(filepath),
+            "type": "audio" if is_audio else "video"
+        }
     except Exception as e:
         error_msg = str(e)
         if "ERROR:" in error_msg:
